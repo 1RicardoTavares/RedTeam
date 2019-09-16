@@ -1,0 +1,13 @@
+mariadb:
+  root_pass: 0MWDPU0NSUSUDH61I0CGL3C3E6EWHWJP
+
+wordpress:
+  wp_db_name: wordpress
+  wp_db_user: wpdbadmin
+  wp_db_pass: 652NV71PLKUXML74KXFVDXUR8XS90GIY
+  url: www.mywebsite.com
+  admin_user: admin
+  admin_pwd: mywppassword
+  admin_email: "email@mywebsite.com"
+  root_directory: "/var/www/mywebsite.com/"
+  title: "My WordPress"

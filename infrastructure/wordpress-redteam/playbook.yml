@@ -1,0 +1,10 @@
+- hosts: wordpress_redteam
+
+  vars_files: vars.yml
+
+  roles:
+    - server
+    - apache2
+    - php
+    - mariadb
+    - wordpress

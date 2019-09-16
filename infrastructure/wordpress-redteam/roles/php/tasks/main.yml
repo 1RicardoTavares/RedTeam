@@ -1,0 +1,13 @@
+---
+- name: Install PHP requirements
+  apt: name={{ packages }} state=present
+  become: yes
+  vars:
+    packages:
+      - php7.3
+      - php7.3-cli
+      - php7.3-fpm
+      - php7.3-gd
+      #      - php7.3-mcrypt
+      - php7.3-mysql
+      - php7.3-ssh2

@@ -1,0 +1,116 @@
+---
+- name: Set cgi.fix_pathinfo on php.ini to 0
+  become: yes
+  replace:
+    dest: /etc/php/7.3/fpm/php.ini
+    regexp: ";cgi.fix_pathinfo=1"
+    replace: "cgi.fix_pathinfo=0"
+
+- name: MariaDB mysql database
+  mysql_db:
+    login_user: root
+    login_password: "{{mariadb.root_pass}}"
+    name: "{{ wordpress.wp_db_name }}"
+    state: present
+
+- name: Create MariaDB user
+  mysql_user:
+    login_user: root
+    login_password: "{{mariadb.root_pass}}"
+    name: "{{ wordpress.wp_db_user }}"
+    password: "{{ wordpress.wp_db_pass }}"
+    priv: "{{ wordpress.wp_db_name }}.*:ALL"
+
+- name: Create webroot
+  become: yes
+  file:
+    state: directory
+    path: /var/www/
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Download WordPress
+  get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /tmp/latest.tar.gz
+
+- name: Extract WordPress
+  unarchive:
+    src: /tmp/latest.tar.gz
+    dest: /tmp
+    owner: www-data
+    group: www-data
+    copy: no
+
+- name: Move WordPress install files
+  become: yes
+  command: mv /tmp/wordpress {{ wordpress.root_directory }}
+
+- name: Create WordPress configuration file
+  become: yes
+  file:
+    path: "{{ wordpress.root_directory}}wp-config.php"
+    state: touch
+
+- name: Fetch random salts for WordPress config
+  local_action: command curl https://api.wordpress.org/secret-key/1.1/salt/
+  register: "wp_salt"
+
+- name: Set WordPress configuration file
+  become: yes
+  blockinfile:
+    marker: ""
+    dest: "{{wordpress.root_directory}}wp-config.php"
+    block: |
+      <?php
+      define('DB_NAME', '{{ wordpress.wp_db_name }}');
+      define('DB_USER', '{{ wordpress.wp_db_user }}');
+      define('DB_PASSWORD', '{{ wordpress.wp_db_pass }}');
+      define('DB_HOST', 'localhost');
+      define('DB_CHARSET', 'utf8mb4');
+      define('DB_COLLATE', ''); 
+      {{ wp_salt.stdout }}
+      $table_prefix = 'wp_';
+      define('WPLANG', '');
+      define('FS_METHOD', 'direct');
+      define('WP_DEBUG', false); 
+      if ( !defined('ABSPATH') )
+          define('ABSPATH', dirname(__FILE__) . '/');
+      require_once(ABSPATH . 'wp-settings.php');
+
+- name: Download wp-cli
+  become: yes
+  get_url:
+    url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    dest: /usr/local/bin/wp
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Install Wordpress
+  become: yes
+  command: >
+    wp --allow-root core install --url={{ wordpress.url }} --title="{{ wordpress.title }}" --admin_user={{ wordpress.admin_user }} --admin_password={{ wordpress.admin_pwd }} --admin_email={{ wordpress.admin_email }} --path={{wordpress.root_directory}}
+
+- name: Update default Apache site
+  become: yes
+  lineinfile: dest=/etc/apache2/sites-enabled/000-default.conf
+    regexp="(.)+DocumentRoot /var/www/html"
+    line="DocumentRoot {{ wordpress.root_directory }}"
+
+- name: Remove default Apache page
+  become: yes
+  file:
+    state: absent
+    dest: /var/www/html/index.html
+
+- name: Restart Apache2
+  service:
+    name: apache2
+    state: restarted
+
+- name: Reload Apache2
+  service:
+    name: apache2
+    state: reloaded
