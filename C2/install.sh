@@ -107,7 +107,8 @@ git clone https://github.com/lgandx/Responder.git
 # CrackMapExec - Python 3
 cd /tmp/ 
 git clone --recursive https://github.com/byt3bl33d3r/CrackMapExec && cd CrackMapExec
-sudo python3 setup.py install
+sudo pip install -r requirements.txt
+sudo python setup.py install
 cd ..
 sudo rm -rf CrackMapExec
 
